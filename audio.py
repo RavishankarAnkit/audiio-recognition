@@ -36,27 +36,66 @@ st.set_page_config(page_title="PragyanAI Song Recognizer")
 
 st.title("🎵 PragyanAI Song Recognizer")
 
-st.write("Record any song to identify it")
+st.write("Recognize songs by recording audio or uploading audio files")
 
 # =========================
-# Audio Recorder
+# Choose Input Method
 # =========================
 
-audio_bytes = audio_recorder(
-    text="Click to Record Song",
-    recording_color="#ff0000",
-    neutral_color="#6aa36f",
-    icon_name="microphone",
-    icon_size="2x",
+option = st.radio(
+    "Choose Audio Input Method",
+    ["🎤 Record Audio", "📂 Upload Audio File"]
 )
 
+audio_data = None
+file_extension = ".wav"
+
 # =========================
-# Song Recognition
+# Record Audio
 # =========================
 
-if audio_bytes:
+if option == "🎤 Record Audio":
 
-    st.audio(audio_bytes, format="audio/wav")
+    audio_bytes = audio_recorder(
+        text="Click to Record Song",
+        recording_color="#ff0000",
+        neutral_color="#6aa36f",
+        icon_name="microphone",
+        icon_size="2x",
+    )
+
+    if audio_bytes:
+
+        st.audio(audio_bytes, format="audio/wav")
+
+        audio_data = audio_bytes
+
+        file_extension = ".wav"
+
+# =========================
+# Upload Audio
+# =========================
+
+else:
+
+    uploaded_file = st.file_uploader(
+        "Upload Audio File",
+        type=["mp3", "wav", "m4a"]
+    )
+
+    if uploaded_file is not None:
+
+        audio_data = uploaded_file.read()
+
+        file_extension = "." + uploaded_file.name.split(".")[-1]
+
+        st.audio(audio_data)
+
+# =========================
+# Recognize Song
+# =========================
+
+if audio_data:
 
     if st.button("Recognize Song"):
 
@@ -65,9 +104,12 @@ if audio_bytes:
             try:
 
                 # Save temporary audio file
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+                with tempfile.NamedTemporaryFile(
+                    delete=False,
+                    suffix=file_extension
+                ) as f:
 
-                    f.write(audio_bytes)
+                    f.write(audio_data)
 
                     temp_audio = f.name
 
@@ -77,19 +119,16 @@ if audio_bytes:
                 # Convert JSON response
                 data = json.loads(result)
 
-                # Debug Output
+                # Debug Response
                 st.write("### API Response")
                 st.write(data)
 
-                # Check if song recognized
+                # Check if recognized
                 if 'metadata' in data and 'music' in data['metadata']:
 
                     music = data['metadata']['music'][0]
 
-                    # =========================
                     # Song Details
-                    # =========================
-
                     song_name = music.get('title', 'Unknown')
 
                     artist = music['artists'][0].get('name', 'Unknown')
@@ -98,12 +137,7 @@ if audio_bytes:
 
                     release_date = music.get('release_date', 'Unknown')
 
-                    duration = music.get('duration_ms', 0)
-
-                    # =========================
                     # Display Results
-                    # =========================
-
                     st.success(f"🎵 Song Name: {song_name}")
 
                     st.info(f"🎤 Singer: {artist}")
@@ -112,20 +146,14 @@ if audio_bytes:
 
                     st.info(f"📅 Release Date: {release_date}")
 
-                    # =========================
                     # Genres
-                    # =========================
-
                     if 'genres' in music:
 
                         genres = [g['name'] for g in music['genres']]
 
                         st.write("🎼 Genres:", ", ".join(genres))
 
-                    # =========================
                     # External Metadata
-                    # =========================
-
                     if 'external_metadata' in music:
 
                         metadata = music['external_metadata']
@@ -138,10 +166,7 @@ if audio_bytes:
                         if 'youtube' in metadata:
                             st.success("YouTube metadata available")
 
-                    # =========================
-                    # Optional Artwork
-                    # =========================
-
+                    # Album Artwork
                     if 'external_metadata' in music:
 
                         metadata = music['external_metadata']
@@ -169,8 +194,7 @@ if audio_bytes:
                     st.error("❌ Song could not be recognized")
 
                     st.warning(
-                        "Try recording 10–15 seconds of clear original music "
-                        "with less background noise."
+                        "Try using clearer audio or longer music clips."
                     )
 
             except Exception as e:
