@@ -4,15 +4,21 @@ from acrcloud.recognizer import ACRCloudRecognizer
 import tempfile
 import json
 
+# =========================
 # ACRCloud Credentials
+# =========================
+
 host = "identify-ap-southeast-1.acrcloud.com"
 
 access_key = "2c4514325ba5e950e2d927ddfa75523b"
 
+# Replace with your REAL secret key
 access_secret = "YOUR_SECRET_KEY"
 
-
+# =========================
 # ACRCloud Configuration
+# =========================
+
 config = {
     'host': host,
     'access_key': access_key,
@@ -22,14 +28,20 @@ config = {
 
 recognizer = ACRCloudRecognizer(config)
 
-# Streamlit Page
+# =========================
+# Streamlit UI
+# =========================
+
 st.set_page_config(page_title="PragyanAI Song Recognizer")
 
 st.title("🎵 PragyanAI Song Recognizer")
 
 st.write("Record any song to identify it")
 
+# =========================
 # Audio Recorder
+# =========================
+
 audio_bytes = audio_recorder(
     text="Click to Record Song",
     recording_color="#ff0000",
@@ -37,6 +49,10 @@ audio_bytes = audio_recorder(
     icon_name="microphone",
     icon_size="2x",
 )
+
+# =========================
+# Song Recognition
+# =========================
 
 if audio_bytes:
 
@@ -48,55 +64,115 @@ if audio_bytes:
 
             try:
 
-                # Save temporary audio
+                # Save temporary audio file
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+
                     f.write(audio_bytes)
+
                     temp_audio = f.name
 
                 # Recognize Song
                 result = recognizer.recognize_by_file(temp_audio, 0)
 
+                # Convert JSON response
                 data = json.loads(result)
 
-                music = data['metadata']['music'][0]
+                # Debug Output
+                st.write("### API Response")
+                st.write(data)
 
-                # Song Details
-                song_name = music.get('title', 'Unknown')
+                # Check if song recognized
+                if 'metadata' in data and 'music' in data['metadata']:
 
-                artist = music['artists'][0].get('name', 'Unknown')
+                    music = data['metadata']['music'][0]
 
-                album = music.get('album', {}).get('name', 'Unknown')
+                    # =========================
+                    # Song Details
+                    # =========================
 
-                release_date = music.get('release_date', 'Unknown')
+                    song_name = music.get('title', 'Unknown')
 
-                st.success(f"🎵 Song Name: {song_name}")
+                    artist = music['artists'][0].get('name', 'Unknown')
 
-                st.info(f"🎤 Singer: {artist}")
+                    album = music.get('album', {}).get('name', 'Unknown')
 
-                st.info(f"💿 Album: {album}")
+                    release_date = music.get('release_date', 'Unknown')
 
-                st.info(f"📅 Release Date: {release_date}")
+                    duration = music.get('duration_ms', 0)
 
-                # Genre
-                if 'genres' in music:
+                    # =========================
+                    # Display Results
+                    # =========================
 
-                    genres = [g['name'] for g in music['genres']]
+                    st.success(f"🎵 Song Name: {song_name}")
 
-                    st.write("🎼 Genres:", ", ".join(genres))
+                    st.info(f"🎤 Singer: {artist}")
 
-                # Extra Metadata
-                if 'external_metadata' in music:
+                    st.info(f"💿 Album: {album}")
 
-                    metadata = music['external_metadata']
+                    st.info(f"📅 Release Date: {release_date}")
 
-                    st.write("## Extra Information")
+                    # =========================
+                    # Genres
+                    # =========================
 
-                    if 'spotify' in metadata:
-                        st.success("Spotify metadata available")
+                    if 'genres' in music:
 
-                    if 'youtube' in metadata:
-                        st.success("YouTube metadata available")
+                        genres = [g['name'] for g in music['genres']]
+
+                        st.write("🎼 Genres:", ", ".join(genres))
+
+                    # =========================
+                    # External Metadata
+                    # =========================
+
+                    if 'external_metadata' in music:
+
+                        metadata = music['external_metadata']
+
+                        st.write("## Extra Information")
+
+                        if 'spotify' in metadata:
+                            st.success("Spotify metadata available")
+
+                        if 'youtube' in metadata:
+                            st.success("YouTube metadata available")
+
+                    # =========================
+                    # Optional Artwork
+                    # =========================
+
+                    if 'external_metadata' in music:
+
+                        metadata = music['external_metadata']
+
+                        if 'spotify' in metadata:
+
+                            spotify_data = metadata['spotify']
+
+                            if 'album' in spotify_data:
+
+                                album_data = spotify_data['album']
+
+                                if 'images' in album_data:
+
+                                    images = album_data['images']
+
+                                    if len(images) > 0:
+
+                                        image_url = images[0]['url']
+
+                                        st.image(image_url, width=300)
+
+                else:
+
+                    st.error("❌ Song could not be recognized")
+
+                    st.warning(
+                        "Try recording 10–15 seconds of clear original music "
+                        "with less background noise."
+                    )
 
             except Exception as e:
 
-                st.error(f"Song not recognized\n\n{e}")
+                st.error(f"Error:\n\n{e}")
