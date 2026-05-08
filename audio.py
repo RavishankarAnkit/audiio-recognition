@@ -11,9 +11,9 @@ import urllib.parse
 
 host = "identify-ap-southeast-1.acrcloud.com"
 
-access_key = "YOUR_ACCESS_KEY"
+access_key = "2c4514325ba5e950e2d927ddfa75523b"
 
-access_secret = "YOUR_SECRET_KEY"
+access_secret = "i1kb8fjnv4xFe4x63YkXC0AGa6jFoJuODBWxmZSB"
 
 # =========================
 # ACRCloud Configuration
